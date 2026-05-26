@@ -596,9 +596,29 @@
   </div>
 </div>
 <div class="toast" id="toast">Copied to clipboard</div>
-<script>
-  let selectedCategory = '';
+<script src="https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js">
 
+  
+  let selectedCategory = '';
+  const msalConfig = {
+  auth: {
+    clientId: "eafd4074-ed05-4e4c-92a6-d6b3dad66cc9",
+    authority: "https://login.microsoftonline.com/ca7981a2-785a-463d-b82a-3db87dfc3ce6",
+    redirectUri: window.location.origin
+  }
+};
+  async function login() {
+  const result = await msalInstance.loginPopup({
+    scopes: ["User.Read"]
+  });
+
+  const user = result.account;
+
+  localStorage.setItem("employee_name", user.name);
+  localStorage.setItem("employee_email", user.username);
+}
+
+const msalInstance = new msal.PublicClientApplication(msalConfig);
   const videoModelGroups = {
     'All-in-One Video Bars': ['Poly Studio X32','Poly Studio X52','Poly Studio X72','Poly Studio X30','Poly Studio X50','Poly Studio X70'],
     'USB Video Bars': ['Poly Studio V12','Poly Studio V52','Poly Studio V72','Poly Studio USB','Poly Studio R30'],
