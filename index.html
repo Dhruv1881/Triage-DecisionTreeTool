@@ -4,150 +4,245 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CCC Triage Tool — Hybrid Systems (Poly Video)</title>
-<script src="https://alcdn.msauth.net/browser/2.38.1/js/msal-browser.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
   :root {
-    --bg:#f8f8f7;--surface:#ffffff;--surface2:#f4f4f2;--border:#e2e2de;
-    --border-strong:#c8c8c2;--text:#1a1a18;--text-muted:#6b6b65;--text-subtle:#9b9b94;
-    --green:#2d7a4f;--green-bg:#edf7f1;--amber:#925a0e;--amber-bg:#fef6e7;
-    --red:#b02020;--red-bg:#fdf0f0;--blue:#1a5caa;--blue-bg:#eef4fc;
-    --mono:'JetBrains Mono','Courier New',monospace;--sans:'Inter',system-ui,sans-serif;
-    --radius:8px;--radius-lg:12px;
+    --bg: #f8f8f7;
+    --surface: #ffffff;
+    --surface2: #f4f4f2;
+    --border: #e2e2de;
+    --border-strong: #c8c8c2;
+    --text: #1a1a18;
+    --text-muted: #6b6b65;
+    --text-subtle: #9b9b94;
+    --accent: #1a1a18;
+    --accent-light: #f0f0ec;
+    --green: #2d7a4f;
+    --green-bg: #edf7f1;
+    --amber: #925a0e;
+    --amber-bg: #fef6e7;
+    --red: #b02020;
+    --red-bg: #fdf0f0;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --radius: 8px;
+    --radius-lg: 12px;
   }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
-
-  /* AUTH OVERLAY */
-  #auth-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;}
-  #auth-overlay.hidden{display:none;}
-  .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 48px;text-align:center;max-width:420px;width:90%;box-shadow:0 4px 32px rgba(0,0,0,0.06);}
-  .auth-logo{background:var(--text);color:#fff;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:2px;padding:6px 12px;border-radius:5px;display:inline-block;margin-bottom:20px;}
-  .auth-card h2{font-size:20px;font-weight:600;margin-bottom:6px;}
-  .auth-card p{color:var(--text-muted);font-size:13px;margin-bottom:28px;line-height:1.6;}
-  .btn-ms{display:inline-flex;align-items:center;gap:10px;background:#0078d4;color:#fff;border:none;border-radius:var(--radius);padding:11px 22px;font-size:14px;font-weight:500;cursor:pointer;transition:background 0.15s;font-family:var(--sans);}
-  .btn-ms:hover{background:#106ebe;}
-  #auth-error{margin-top:14px;color:var(--red);font-size:12px;display:none;}
-
-  /* AGENT BAR */
-  #agent-bar{background:var(--blue-bg);border-bottom:1px solid #c5d9f0;padding:7px 28px;display:none;align-items:center;justify-content:space-between;font-size:12px;}
-  #agent-bar.visible{display:flex;}
-  .agent-info{display:flex;align-items:center;gap:10px;}
-  .agent-avatar{width:28px;height:28px;border-radius:50%;background:var(--text);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;}
-  .agent-name{font-weight:600;color:var(--text);}
-  .agent-email{color:var(--text-muted);font-family:var(--mono);font-size:11px;}
-  .btn-signout{background:transparent;border:1px solid #c5d9f0;color:var(--blue);font-size:11px;font-weight:500;padding:4px 10px;border-radius:5px;cursor:pointer;font-family:var(--sans);transition:all 0.12s;}
-  .btn-signout:hover{background:#fff;}
-
-  /* EXCEL STATUS BAR */
-  #xl-status-bar{padding:6px 28px;font-size:12px;display:none;align-items:center;gap:8px;}
-  #xl-status-bar.visible{display:flex;}
-  #xl-status-bar.ok{background:var(--green-bg);border-bottom:1px solid #b8dfc9;color:var(--green);}
-  #xl-status-bar.warn{background:var(--amber-bg);border-bottom:1px solid #f0d49a;color:var(--amber);}
-  #xl-status-bar.error{background:var(--red-bg);border-bottom:1px solid #f0b8b8;color:var(--red);}
-
-  /* HEADER */
-  header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
-  .logo-area{display:flex;align-items:center;gap:14px;}
-  .logo-badge{background:var(--text);color:#fff;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:1.5px;padding:4px 9px;border-radius:4px;text-transform:uppercase;}
-  header h1{font-size:15px;font-weight:600;}
-  header p{font-size:11px;color:var(--text-muted);margin-top:1px;font-family:var(--mono);}
-  .header-actions{display:flex;gap:8px;}
-
-  /* FORM */
-  .container{max-width:1080px;margin:0 auto;padding:28px 24px 80px;}
-  .step-label{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:10px;}
-  .step-label::after{content:'';flex:1;height:1px;background:var(--border);}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;margin-bottom:16px;}
-  .card-title{font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:16px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:0.8px;}
-  label{display:block;font-size:11px;font-weight:500;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:5px;}
-  input:not([type=hidden]),select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:14px;padding:9px 12px;outline:none;transition:border-color 0.15s,box-shadow 0.15s;appearance:none;}
-  input:not([type=hidden]):focus,select:focus,textarea:focus{border-color:var(--text);background:var(--surface);box-shadow:0 0 0 3px rgba(26,26,24,0.06);}
-  select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6b65' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;padding-right:32px;}
-  textarea{resize:vertical;min-height:78px;line-height:1.6;}
-  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .form-grid.three{grid-template-columns:1fr 1fr 1fr;}
-  .span2{grid-column:1/-1;}
-  .category-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:4px;}
-  .cat-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 6px;text-align:center;cursor:pointer;font-family:var(--sans);font-size:11px;font-weight:500;color:var(--text-muted);display:flex;flex-direction:column;align-items:center;gap:5px;transition:all 0.12s;letter-spacing:0.2px;}
-  .cat-btn .icon{font-size:18px;}
-  .cat-btn:hover{border-color:var(--border-strong);color:var(--text);background:var(--surface);}
-  .cat-btn.active{background:var(--text);border-color:var(--text);color:#fff;}
-  .checklist{display:flex;flex-direction:column;gap:6px;}
-  .check-item{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;background:var(--surface2);border-radius:var(--radius);border:1px solid transparent;cursor:pointer;font-size:13px;color:var(--text-muted);user-select:none;transition:all 0.12s;}
-  .check-item:hover{border-color:var(--border);color:var(--text);}
-  .check-item.checked{border-color:var(--border);background:var(--surface);color:var(--text);}
-  .check-item .cb{width:15px;height:15px;flex-shrink:0;border-radius:4px;border:1px solid var(--border-strong);display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all 0.12s;background:var(--surface);}
-  .check-item.checked .cb{background:var(--text);border-color:var(--text);}
-  .check-item.checked .cb::after{content:'';display:block;width:8px;height:5px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px);}
-  .btn{padding:9px 18px;border-radius:var(--radius);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.12s;letter-spacing:0.2px;}
-  .btn-primary{background:var(--text);color:#fff;}
-  .btn-primary:hover{background:#333330;}
-  .btn-primary:disabled{background:var(--border-strong);cursor:not-allowed;}
-  .btn-outline{background:transparent;color:var(--text-muted);border:1px solid var(--border);}
-  .btn-outline:hover{border-color:var(--border-strong);color:var(--text);}
-  .btn-green{background:var(--green-bg);color:var(--green);border:1px solid #b8dfc9;}
-  .btn-green:hover{background:#dff2e8;}
-  #output-section{display:none;}
-  #output-section.visible{display:block;}
-  .output-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:640px;overflow-y:auto;}
-  .output-toolbar{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
-  .output-toolbar span,#output-meta{font-family:var(--mono);font-size:13px;color:var(--text-muted);}
-  .context-section{display:none;}
-  .context-section.visible{display:block;}
-  .toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;font-weight:500;font-size:13px;padding:11px 18px;border-radius:var(--radius);opacity:0;transform:translateY(8px);transition:all 0.25s;pointer-events:none;z-index:999;}
-  .toast.show{opacity:1;transform:translateY(0);}
-  .toast.green{background:var(--green);}
-  .toast.red{background:var(--red);}
-  .progress-bar-wrap{height:2px;background:var(--border);border-radius:2px;margin-bottom:22px;overflow:hidden;}
-  .progress-bar{height:100%;background:var(--text);border-radius:2px;transition:width 0.4s ease;width:0%;}
-  small{font-size:11px;color:var(--text-subtle);margin-top:4px;display:block;}
-  .divider{height:1px;background:var(--border);margin:8px 0 16px;}
-  .save-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:var(--radius);font-family:var(--mono);}
-  .save-status.saving{background:var(--amber-bg);color:var(--amber);}
-  .save-status.saved{background:var(--green-bg);color:var(--green);}
-  .save-status.failed{background:var(--red-bg);color:var(--red);}
-  .save-status.idle{display:none;}
-  @media(max-width:640px){
-    .category-grid{grid-template-columns:repeat(3,1fr);}
-    .form-grid,.form-grid.three{grid-template-columns:1fr;}
-    .span2{grid-column:auto;}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo-area { display: flex; align-items: center; gap: 14px; }
+  .logo-badge {
+    background: var(--text);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    padding: 4px 9px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  header h1 { font-size: 15px; font-weight: 600; color: var(--text); }
+  header p { font-size: 11px; color: var(--text-muted); margin-top: 1px; font-family: var(--mono); }
+  .header-actions { display: flex; gap: 8px; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 28px 24px 80px; }
+  .step-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  input:not([type=hidden]), select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+  }
+  input:not([type=hidden]):focus, select:focus, textarea:focus {
+    border-color: var(--text);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px rgba(26,26,24,0.06);
+  }
+  select { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b6b65' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; padding-right: 32px; }
+  textarea { resize: vertical; min-height: 78px; line-height: 1.6; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .span2 { grid-column: 1 / -1; }
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .cat-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 6px;
+    text-align: center;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.12s;
+    letter-spacing: 0.2px;
+  }
+  .cat-btn .icon { font-size: 18px; }
+  .cat-btn:hover { border-color: var(--border-strong); color: var(--text); background: var(--surface); }
+  .cat-btn.active { background: var(--text); border-color: var(--text); color: #fff; }
+  .checklist { display: flex; flex-direction: column; gap: 6px; }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 11px;
+    background: var(--surface2);
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-muted);
+    user-select: none;
+    transition: all 0.12s;
+  }
+  .check-item:hover { border-color: var(--border); color: var(--text); }
+  .check-item.checked { border-color: var(--border); background: var(--surface); color: var(--text); }
+  .check-item .cb {
+    width: 15px; height: 15px; flex-shrink: 0;
+    border-radius: 4px; border: 1px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 1px; transition: all 0.12s; background: var(--surface);
+  }
+  .check-item.checked .cb { background: var(--text); border-color: var(--text); }
+  .check-item.checked .cb::after { content: ''; display: block; width: 8px; height: 5px; border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff; transform: rotate(-45deg) translateY(-1px); }
+  .btn {
+    padding: 9px 18px; border-radius: var(--radius); font-family: var(--sans);
+    font-size: 13px; font-weight: 500; cursor: pointer; border: none;
+    transition: all 0.12s; letter-spacing: 0.2px;
+  }
+  .btn-primary { background: var(--text); color: #fff; }
+  .btn-primary:hover { background: #333330; }
+  .btn-outline { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--border-strong); color: var(--text); }
+  .btn-green { background: var(--green-bg); color: var(--green); border: 1px solid #b8dfc9; }
+  .btn-green:hover { background: #dff2e8; }
+  #output-section { display: none; }
+  #output-section.visible { display: block; }
+  .output-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px 24px;
+    font-family: var(--mono);
+    font-size: 13px; /* unified size for output */
+    line-height: 1.6; /* consistent spacing */
+    color: var(--text);
+    white-space: pre-wrap; /* allow wrapping to fit paste area */
+    word-break: break-word;
+    max-height: 640px;
+    overflow-y: auto;
+    overflow-x: auto;
+  }
+  .output-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .output-toolbar span, #output-meta, .output-toolbar button {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .context-section { display: none; }
+  .context-section.visible { display: block; }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--text); color: #fff;
+    font-weight: 500; font-size: 13px;
+    padding: 11px 18px; border-radius: var(--radius);
+    opacity: 0; transform: translateY(8px);
+    transition: all 0.25s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .progress-bar-wrap { height: 2px; background: var(--border); border-radius: 2px; margin-bottom: 22px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--text); border-radius: 2px; transition: width 0.4s ease; width: 0%; }
+  small { font-size: 11px; color: var(--text-subtle); margin-top: 4px; display: block; }
+  .divider { height: 1px; background: var(--border); margin: 8px 0 16px; }
+  @media (max-width: 640px) {
+    .category-grid { grid-template-columns: repeat(3, 1fr); }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid.three { grid-template-columns: 1fr; }
+    .span2 { grid-column: auto; }
   }
 </style>
 </head>
 <body>
-
-<!-- AUTH OVERLAY -->
-<div id="auth-overlay">
-  <div class="auth-card">
-    <div class="auth-logo">CCC</div>
-    <h2>Triage Decision Tool</h2>
-    <p>Sign in with your Microsoft work account. Your identity is recorded on every note and saved to the shared Excel log automatically.</p>
-    <button class="btn-ms" onclick="signIn()">
-      <svg width="18" height="18" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
-      Sign in with Microsoft
-    </button>
-    <div id="auth-error">Sign-in failed. Please try again or contact your admin.</div>
-  </div>
-</div>
-
-<!-- AGENT BAR -->
-<div id="agent-bar">
-  <div class="agent-info">
-    <div class="agent-avatar" id="agent-initials">--</div>
-    <div>
-      <div class="agent-name" id="agent-name-display">—</div>
-      <div class="agent-email" id="agent-email-display">—</div>
-    </div>
-  </div>
-  <button class="btn-signout" onclick="signOut()">Sign out</button>
-</div>
-
-<!-- EXCEL STATUS BAR -->
-<div id="xl-status-bar">
-  <span id="xl-status-text"></span>
-</div>
-
 <header>
   <div class="logo-area">
     <span class="logo-badge">CCC</span>
@@ -158,30 +253,51 @@
   </div>
   <div class="header-actions">
     <button class="btn btn-outline" onclick="resetForm()">Reset</button>
-    <button class="btn btn-primary" id="btn-generate" onclick="generateNote()" disabled>Generate Note</button>
+    <button class="btn btn-primary" onclick="generateNote()">Generate Note</button>
   </div>
 </header>
-
 <div class="container">
   <div class="progress-bar-wrap"><div class="progress-bar" id="progress"></div></div>
 
-  <!-- STEP 1 -->
   <div class="step-label">Step 1 — Customer &amp; Device Info</div>
   <div class="card">
     <div class="card-title">Customer Details</div>
     <div class="form-grid three">
-      <div><label>Customer Name</label><input type="text" id="customer_name" placeholder="Full name" oninput="updateProgress()"></div>
-      <div><label>Contact Number</label><input type="tel" id="contact_number" placeholder="+1 555 555 5555" oninput="updateProgress()"></div>
-      <div><label>Country</label><input type="text" id="country" placeholder="Country" oninput="updateProgress()"></div>
-      <div><label>Email Address</label><input type="email" id="email_address" placeholder="user@example.com" oninput="updateProgress()"></div>
-      <div><label>Company</label><input type="text" id="company" placeholder="Company / Organization" oninput="updateProgress()"></div>
-      <div><label>BTTR</label><input type="text" id="bttr" placeholder="BTTR value (if applicable)"></div>
-      <div><label>APN</label><input type="text" id="apn" placeholder="APN (if applicable)"></div>
-      <div class="span2"><label>Address</label><textarea id="address" rows="2" placeholder="Customer address / site location"></textarea></div>
+      <div>
+        <label>Customer Name</label>
+        <input type="text" id="customer_name" placeholder="Full name" oninput="updateProgress()">
+      </div>
+      <div>
+        <label>Contact Number</label>
+        <input type="tel" id="contact_number" placeholder="+1 555 555 5555" oninput="updateProgress()">
+      </div>
+      <div>
+        <label>Country</label>
+        <input type="text" id="country" placeholder="Country" oninput="updateProgress()">
+      </div>
+      <div>
+        <label>Email Address</label>
+        <input type="email" id="email_address" placeholder="user@example.com" oninput="updateProgress()">
+      </div>
+      <div>
+        <label>Company</label>
+        <input type="text" id="company" placeholder="Company / Organization" oninput="updateProgress()">
+      </div>
+      <div>
+        <label>BTTR</label>
+        <input type="text" id="bttr" placeholder="BTTR value (if applicable)">
+      </div>
+      <div>
+        <label>APN</label>
+        <input type="text" id="apn" placeholder="APN (if applicable)">
+      </div>
+      <div class="span2">
+        <label>Address</label>
+        <textarea id="address" rows="2" placeholder="Customer address / site location" oninput="updateProgress()"></textarea>
+      </div>
     </div>
   </div>
 
-  <!-- STEP 2 -->
   <div class="card">
     <div class="card-title">Mandatory Device Data — Step 2</div>
     <div class="form-grid three">
@@ -195,28 +311,41 @@
       </div>
       <div>
         <label>Device Model</label>
-        <select id="device_model" onchange="deviceModelChanged();updateProgress()"><option value="">Select model…</option></select>
+        <select id="device_model" onchange="deviceModelChanged(); updateProgress()">
+          <option value="">Select model…</option>
+        </select>
       </div>
       <div>
         <label id="lbl_device_model_custom" style="display:none">Custom Model</label>
         <input type="text" id="device_model_custom" placeholder="Enter model name" style="display:none">
       </div>
-      <div><label>Serial Number</label><input type="text" id="serial" placeholder="e.g. 12A3B456" oninput="updateProgress()" style="font-family:var(--mono)"></div>
-      <div><label>Firmware — Device</label><input type="text" id="fw_device" placeholder="e.g. 3.14.2" style="font-family:var(--mono)"></div>
-      <div><label>Provider Name</label><input type="text" id="provider_name" placeholder="Service / Provider name" style="font-family:var(--mono)"></div>
-      <div><label>Provider Firmware / Version</label><input type="text" id="provider_fw" placeholder="Provider firmware / service version" style="font-family:var(--mono)"></div>
+      <div>
+        <label>Serial Number</label>
+        <input type="text" id="serial" placeholder="e.g. 12A3B456" oninput="updateProgress()" style="font-family:var(--mono)">
+      </div>
+      <div>
+        <label>Firmware — Device</label>
+        <input type="text" id="fw_device" placeholder="e.g. 3.14.2" style="font-family:var(--mono)">
+      </div>
+      <div>
+        <label>Provider Name</label>
+        <input type="text" id="provider_name" placeholder="Service / Provider name" style="font-family:var(--mono)">
+      </div>
+      <div>
+        <label>Provider Firmware / Version</label>
+        <input type="text" id="provider_fw" placeholder="Provider firmware / service version" style="font-family:var(--mono)">
+      </div>
       <div>
         <label id="lbl_fw_touch" style="display:none">Firmware — Touch Panel</label>
-        <input type="text" id="fw_touch" placeholder="Touch panel firmware" style="font-family:var(--mono);display:none">
+        <input type="text" id="fw_touch" placeholder="Touch panel firmware" style="font-family:var(--mono); display:none">
       </div>
     </div>
   </div>
 
-  <!-- STEP 3 -->
   <div class="step-label" id="issue_category_label">Step 3 — Identify Issue Category</div>
   <div class="card" id="card_issue_category">
     <div class="card-title">Primary Issue Category</div>
-    <div class="category-grid">
+    <div class="category-grid" id="cat-grid">
       <button class="cat-btn" onclick="selectCategory(this,'Power ON/OFF')"><span class="icon">⏻</span>Power ON/Off</button>
       <button class="cat-btn" onclick="selectCategory(this,'Video')"><span class="icon">📹</span>Video</button>
       <button class="cat-btn" onclick="selectCategory(this,'Audio')"><span class="icon">🔊</span>Audio</button>
@@ -228,40 +357,208 @@
       <button class="cat-btn" onclick="selectCategory(this,'Other')"><span class="icon">❓</span>Other</button>
     </div>
     <input type="hidden" id="issue_category" value="">
-    <div id="ctx-power" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Sub-issue</label><select id="sub_power" onchange="subSelectChanged('sub_power')"><option value="">Select…</option><option>Device not powering ON</option><option>Device powers off unexpectedly</option><option>LED blinking abnormally</option><option>Burn smell / visible damage</option><option>Other</option></select><div style="margin-top:10px"><label>Physical damage observed?</label><input type="text" id="sub_power_damage" placeholder="Describe if any"></div><div style="margin-top:8px"><label id="lbl_sub_power_other" style="display:none">If Other, describe</label><input type="text" id="sub_power_other" style="display:none"></div></div>
-    <div id="ctx-video" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Sub-issue</label><select id="sub_video" onchange="subSelectChanged('sub_video')"><option value="">Select…</option><option>No display / black screen</option><option>Poor / flickering video</option><option>TX or RX issue</option><option>Display connectivity issue</option><option>Packet loss / jitter (quality)</option><option>Other</option></select><div style="margin-top:10px"><label>TX or RX affected?</label><select id="sub_video_txrx"><option value="">Select…</option><option>TX</option><option>RX</option><option>Both</option></select></div><div style="margin-top:8px"><label id="lbl_sub_video_other" style="display:none">If Other, describe</label><input type="text" id="sub_video_other" style="display:none"></div></div>
-    <div id="ctx-audio" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Sub-issue</label><select id="sub_audio" onchange="subSelectChanged('sub_audio')"><option value="">Select…</option><option>No audio</option><option>Poor / echo / distorted audio</option><option>One-way audio</option><option>Mic not working</option><option>Speaker not working</option><option>Other</option></select><div style="margin-top:8px"><label id="lbl_sub_audio_other" style="display:none">If Other, describe</label><input type="text" id="sub_audio_other" style="display:none"></div></div>
-    <div id="ctx-touch" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Sub-issue</label><select id="sub_touch" onchange="subSelectChanged('sub_touch')"><option value="">Select…</option><option>Disconnection issue</option><option>Unresponsive touch panel</option><option>Pairing issue</option><option>Firmware / Teams / Zoom / G9 Plus pairing issue</option><option>Other</option></select><div style="margin-top:10px"><label>Same VLAN / network segment?</label><select id="sub_touch_vlan"><option value="">Select…</option><option>Yes</option><option>No</option><option>Unknown</option></select></div><div style="margin-top:8px"><label id="lbl_sub_touch_other" style="display:none">If Other, describe</label><input type="text" id="sub_touch_other" style="display:none"></div></div>
-    <div id="ctx-network" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Sub-issue</label><select id="sub_network" onchange="subSelectChanged('sub_network')"><option value="">Select…</option><option>No connectivity</option><option>IP address not assigned</option><option>DNS resolution failure</option><option>Required ports / IPs not whitelisted</option><option>Proxy configuration issue</option><option>Other</option></select><div style="margin-top:10px"><label>IP Address Assignment</label><select id="sub_net_ip"><option value="">Select…</option><option>DHCP</option><option>Static</option></select></div><div style="margin-top:8px"><label id="lbl_sub_network_other" style="display:none">If Other, describe</label><input type="text" id="sub_network_other" style="display:none"></div></div>
-    <div id="ctx-ecosystem" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Platform affected</label><select id="sub_eco" onchange="subSelectChanged('sub_eco')"><option value="">Select…</option><option>Microsoft Teams</option><option>Zoom</option><option>Google Meet</option><option>Multiple platforms</option><option>Other</option></select><div style="margin-top:10px"><label>Sub-issue</label><select id="sub_eco_issue" onchange="subSelectChanged('sub_eco_issue')"><option value="">Select…</option><option>Sign-in issue</option><option>Call failure</option><option>Call quality issue</option><option>License issue</option><option>Other</option></select></div><div style="margin-top:8px"><label id="lbl_sub_eco_other" style="display:none">If Other, describe</label><input type="text" id="sub_eco_other" style="display:none"></div><div style="margin-top:8px"><label id="lbl_sub_eco_issue_other" style="display:none">If Other, describe</label><input type="text" id="sub_eco_issue_other" style="display:none"></div></div>
-    <div id="ctx-performance" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Sub-issue</label><select id="sub_perf" onchange="subSelectChanged('sub_perf')"><option value="">Select…</option><option>Lag / slow response</option><option>Crash / unexpected restart</option><option>High CPU / memory</option><option>Reports inaccurate</option><option>Other</option></select><div style="margin-top:10px"><label>Started after firmware upgrade?</label><select id="sub_perf_fw"><option value="">Select…</option><option>Yes</option><option>No</option><option>Unknown</option></select></div><div style="margin-top:8px"><label id="lbl_sub_perf_other" style="display:none">If Other, describe</label><input type="text" id="sub_perf_other" style="display:none"></div></div>
-    <div id="ctx-peripherals" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Sub-issue</label><select id="sub_peri" onchange="subSelectChanged('sub_peri')"><option value="">Select…</option><option>Camera not detected</option><option>Microphone not working</option><option>USB device not recognized</option><option>Third-party integration issue</option><option>Other</option></select><div style="margin-top:8px"><label id="lbl_sub_peri_other" style="display:none">If Other, describe</label><input type="text" id="sub_peri_other" style="display:none"></div></div>
-    <div id="ctx-other" class="context-section" style="margin-top:16px"><div class="divider"></div><label>Other — Additional notes</label><textarea id="ctx_other_notes" rows="3" placeholder="Describe the issue / context when Other category chosen"></textarea></div>
-  </div>
 
-  <!-- STEP 4 -->
-  <div class="step-label">Step 4 — Issue Description</div>
-  <div class="card">
-    <div class="card-title">Detailed Issue Description</div>
-    <div><label>Describe the issue (as reported by customer)</label><textarea id="issue_desc" rows="4" placeholder="Include what happened, when it started, and any steps already attempted..." oninput="updateProgress()"></textarea></div>
-    <div class="form-grid" style="margin-top:12px">
-      <div><label>Is this a new (Out-of-Box) device?</label><select id="is_oob"><option value="">Select…</option><option>Yes — OOB device</option><option>No — previously working</option></select></div>
-      <div><label>Is issue reproducible?</label><select id="reproducible" onchange="reproducibleChanged()"><option value="">Select…</option><option>Yes — consistently</option><option>Yes — intermittently</option><option>No — happened once</option><option>Not yet tested</option></select></div>
-      <div id="repro_details" style="display:none" class="span2"><label>Steps to reproduce / observed pattern</label><textarea id="repro_desc" rows="2" placeholder="Steps to reproduce or observed pattern"></textarea></div>
+    <div id="ctx-power" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Sub-issue</label>
+      <select id="sub_power" onchange="subSelectChanged('sub_power')">
+        <option value="">Select…</option>
+        <option>Device not powering ON</option>
+        <option>Device powers off unexpectedly</option>
+        <option>LED blinking abnormally</option>
+        <option>Burn smell / visible damage</option>
+        <option>Other</option>
+      </select>
+      <div style="margin-top:10px">
+        <label>Physical damage observed?</label>
+        <input type="text" id="sub_power_damage" placeholder="Describe if any">
+      </div>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_power_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_power_other" placeholder="Describe other sub-issue" style="display:none">
+      </div>
+    </div>
+    <div id="ctx-video" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Sub-issue</label>
+      <select id="sub_video" onchange="subSelectChanged('sub_video')">
+        <option value="">Select…</option>
+        <option>No display / black screen</option>
+        <option>Poor / flickering video</option>
+        <option>TX or RX issue</option>
+        <option>Display connectivity issue</option>
+        <option>Packet loss / jitter (quality)</option>
+        <option>Other</option>
+      </select>
+      <div style="margin-top:10px">
+        <label>TX or RX affected?</label>
+        <select id="sub_video_txrx"><option value="">Select…</option><option>TX</option><option>RX</option><option>Both</option></select>
+      </div>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_video_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_video_other" placeholder="Describe other sub-issue" style="display:none">
+      </div>
+    </div>
+    <div id="ctx-audio" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Sub-issue</label>
+      <select id="sub_audio" onchange="subSelectChanged('sub_audio')">
+        <option value="">Select…</option>
+        <option>No audio</option>
+        <option>Poor / echo / distorted audio</option>
+        <option>One-way audio</option>
+        <option>Mic not working</option>
+        <option>Speaker not working</option>
+        <option>Other</option>
+      </select>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_audio_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_audio_other" placeholder="Describe other sub-issue" style="display:none">
+      </div>
+    </div>
+    <div id="ctx-touch" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Sub-issue</label>
+      <select id="sub_touch" onchange="subSelectChanged('sub_touch')">
+        <option value="">Select…</option>
+        <option>Disconnection issue</option>
+        <option>Unresponsive touch panel</option>
+        <option>Pairing issue</option>
+        <option>Firmware / Teams / Zoom / G9 Plus pairing issue</option>
+        <option>Other</option>
+      </select>
+      <div style="margin-top:10px">
+        <label>Same VLAN / network segment?</label>
+        <select id="sub_touch_vlan"><option value="">Select…</option><option>Yes</option><option>No</option><option>Unknown</option></select>
+      </div>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_touch_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_touch_other" placeholder="Describe other sub-issue" style="display:none">
+      </div>
+    </div>
+    <div id="ctx-network" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Sub-issue</label>
+      <select id="sub_network" onchange="subSelectChanged('sub_network')">
+        <option value="">Select…</option>
+        <option>No connectivity</option>
+        <option>IP address not assigned</option>
+        <option>DNS resolution failure</option>
+        <option>Required ports / IPs not whitelisted</option>
+        <option>Proxy configuration issue</option>
+        <option>Other</option>
+      </select>
+      <div style="margin-top:10px">
+        <label>IP Address Assignment</label>
+        <select id="sub_net_ip"><option value="">Select…</option><option>DHCP</option><option>Static</option></select>
+      </div>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_network_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_network_other" placeholder="Describe other sub-issue" style="display:none">
+      </div>
+    </div>
+    <div id="ctx-ecosystem" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Platform affected</label>
+      <select id="sub_eco" onchange="subSelectChanged('sub_eco')">
+        <option value="">Select…</option>
+        <option>Microsoft Teams</option>
+        <option>Zoom</option>
+        <option>Google Meet</option>
+        <option>Multiple platforms</option>
+        <option>Other</option>
+      </select>
+      <div style="margin-top:10px">
+        <label>Sub-issue</label>
+        <select id="sub_eco_issue" onchange="subSelectChanged('sub_eco_issue')"><option value="">Select…</option><option>Sign-in issue</option><option>Call failure</option><option>Call quality issue</option><option>License issue</option><option>Other</option></select>
+      </div>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_eco_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_eco_other" placeholder="Describe other platform/sub-issue" style="display:none">
+      </div>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_eco_issue_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_eco_issue_other" placeholder="Describe other sub-issue" style="display:none">
+      </div>
+    </div>
+    <div id="ctx-performance" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Sub-issue</label>
+      <select id="sub_perf" onchange="subSelectChanged('sub_perf')">
+        <option value="">Select…</option>
+        <option>Lag / slow response</option>
+        <option>Crash / unexpected restart</option>
+        <option>High CPU / memory</option>
+        <option>Reports inaccurate</option>
+        <option>Other</option>
+      </select>
+      <div style="margin-top:10px">
+        <label>Started after firmware upgrade?</label>
+        <select id="sub_perf_fw"><option value="">Select…</option><option>Yes</option><option>No</option><option>Unknown</option></select>
+      </div>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_perf_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_perf_other" placeholder="Describe other sub-issue" style="display:none">
+      </div>
+    </div>
+    <div id="ctx-peripherals" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Sub-issue</label>
+      <select id="sub_peri" onchange="subSelectChanged('sub_peri')">
+        <option value="">Select…</option>
+        <option>Camera not detected</option>
+        <option>Microphone not working</option>
+        <option>USB device not recognized</option>
+        <option>Third-party integration issue</option>
+        <option>Other</option>
+      </select>
+      <div style="margin-top:8px">
+        <label id="lbl_sub_peri_other" style="display:none">If Other, describe</label>
+        <input type="text" id="sub_peri_other" placeholder="Describe other sub-issue" style="display:none">
+      </div>
+    </div>
+    <div id="ctx-other" class="context-section" style="margin-top:16px">
+      <div class="divider"></div>
+      <label>Other — Additional notes</label>
+      <textarea id="ctx_other_notes" rows="3" placeholder="Describe the issue / context when Other category chosen"></textarea>
     </div>
   </div>
 
-  <!-- STEP 5 -->
-  <div class="step-label">Step 5 — Troubleshooting Performed</div>
+  <div class="step-label">Step 4 — Issue Description</div>
   <div class="card">
-    <div class="card-title">Actions Taken — checklist adapts to selected issue</div>
-    <div class="checklist" id="checklist"></div>
-    <div style="margin-top:12px"><label>Additional troubleshooting notes</label><textarea id="ts_notes" rows="3" placeholder="Agent troubleshooting notes / actions taken / customer feedback..."></textarea></div>
+    <div class="card-title">Detailed Issue Description</div>
+    <div>
+      <label>Describe the issue (as reported by customer)</label>
+      <textarea id="issue_desc" rows="4" placeholder="Include what happened, when it started, and any steps already attempted..." oninput="updateProgress()"></textarea>
+    </div>
+    <div class="form-grid" style="margin-top:12px">
+      <div>
+        <label>Is this a new (Out-of-Box) device?</label>
+        <select id="is_oob"><option value="">Select…</option><option>Yes — OOB device</option><option>No — previously working</option></select>
+      </div>
+      <div>
+        <label>Is issue reproducible?</label>
+        <select id="reproducible" onchange="reproducibleChanged()"><option value="">Select…</option><option>Yes — consistently</option><option>Yes — intermittently</option><option>No — happened once</option><option>Not yet tested</option></select>
+      </div>
+      <div id="repro_details" style="display:none" class="span2">
+        <label>Steps to reproduce / observed pattern</label>
+        <textarea id="repro_desc" rows="2" placeholder="Steps to reproduce or observed pattern"></textarea>
+      </div>
+    </div>
   </div>
 
-  <!-- STEP 6 -->
+  <div class="step-label">Step 5 — Troubleshooting Performed</div>
+  <div class="card" id="card_checklist">
+    <div class="card-title">Actions Taken — checklist adapts to selected issue</div>
+    <div class="checklist" id="checklist"></div>
+    <div style="margin-top:12px">
+      <label>Additional troubleshooting notes</label>
+      <textarea id="ts_notes" rows="3" placeholder="Agent troubleshooting notes / actions taken / customer feedback..."></textarea>
+    </div>
+  </div>
+
   <div class="step-label">Step 6 — Data Collected</div>
-  <div class="card">
+  <div class="card" id="card_data_collected">
     <div class="card-title">Mandatory Data Collection Status</div>
     <div class="checklist" id="data_checklist">
       <div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Logs collected (uploaded to file exchange)</span></div>
@@ -270,21 +567,22 @@
     </div>
   </div>
 
-  <!-- FINAL -->
   <div class="step-label">Final — Escalation</div>
   <div class="card">
     <div class="card-title">Elevation Decision</div>
-    <div class="checklist" id="final_escalation"><div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Elevate to L1.5</span></div></div>
+    <div class="checklist" id="final_escalation">
+      <div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Elevate to L1.5</span></div>
+    </div>
   </div>
+
   <div class="card">
     <div class="card-title">Additional Notes / Customer Communication</div>
     <textarea id="additional_notes" rows="3" placeholder="Any other relevant info, customer quotes, commitments made..."></textarea>
   </div>
 
-  <div style="display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-bottom:28px">
-    <span class="save-status idle" id="save-status-indicator"></span>
+  <div style="display:flex; gap:10px; justify-content:flex-end; margin-bottom:28px">
     <button class="btn btn-outline" onclick="resetForm()">Start Over</button>
-    <button class="btn btn-primary" id="btn-generate-bottom" onclick="generateNote()" disabled style="font-size:14px;padding:11px 26px;">Generate &amp; Save Note</button>
+    <button class="btn btn-primary" onclick="generateNote()" style="font-size:14px; padding:11px 26px;">Generate Triage Note</button>
   </div>
 
   <div id="output-section">
@@ -297,505 +595,488 @@
     <div class="output-box" id="output-box"></div>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
+<div class="toast" id="toast">Copied to clipboard</div>
 <script>
-// ╔══════════════════════════════════════════════════════════════╗
-// ║  ADMIN CONFIG — Update these three values before deploying  ║
-// ╚══════════════════════════════════════════════════════════════╝
-const CONFIG = {
-  // Azure AD app registration
-  clientId:   "eafd4074-ed05-4e4c-92a6-d6b3dad66cc9",
-  tenantId:   "ca7981a2-785a-463d-b82a-3db87dfc3ce6",
+  let selectedCategory = '';
 
-  // SharePoint/Teams site that hosts the Excel file
-  // e.g. "https://contoso.sharepoint.com/sites/CCC"
-  spSiteUrl:  "https://hp-my.sharepoint.com/:x:/r/personal/dhruv_sharma1_hp_com/_layouts/15/Doc.aspx?sourcedoc=%7B02FA1E94-20FD-4A12-8C84-4D6C64C3473C%7D&file=Book.xlsx&action=editNew&mobileredirect=true&wdOrigin=MARKETING.EXCEL.OPEN%2CAPPHOME-WEB.BANNER.NEWBLANK&wdPreviousSession=7507147a-7953-436e-89b0-e2e56768c705&wdPreviousSessionSrc=AppHomeWeb&ct=1779825403850",
+  const videoModelGroups = {
+    'All-in-One Video Bars': ['Poly Studio X32','Poly Studio X52','Poly Studio X72','Poly Studio X30','Poly Studio X50','Poly Studio X70'],
+    'USB Video Bars': ['Poly Studio V12','Poly Studio V52','Poly Studio V72','Poly Studio USB','Poly Studio R30'],
+    'Modular Room Systems / Codecs': ['Poly Studio G62','Poly Studio G7500'],
+    'Cameras & Video Accessories': ['Poly Studio E60','Poly Studio E70','Poly TC8','Poly TC10'],
+    'Conference Phones / Speakerphones': ['Poly Trio C60','Poly Trio 8300','Poly Trio 8800','Poly SoundStation']
+  };
+  const voiceModelGroups = {
+    'IP Desk Phones (VVX Series)': ['Poly VVX 150','Poly VVX 201','Poly VVX 250','Poly VVX 350','Poly VVX 450','Poly VVX 500'],
+    'CCX Series': ['Poly CCX 400','Poly CCX 500','Poly CCX 600','Poly CCX 700'],
+    'Edge Series Phones': ['Poly Edge B10','Poly Edge B20','Poly Edge B30','Poly Edge E500','Poly Edge E550']
+  };
 
-  // Document library name (the "Documents" folder in Teams Files tab is usually "Shared Documents")
-  driveAlias: "Documents",
-
-  // Exact filename of the Excel workbook (must already exist — see setup note below)
-  xlFileName: "CCC Triage Log.xlsx",
-
-  // Sheet name inside the workbook (Tab name)
-  xlSheetName: "Log"
-};
-// ═══════════════════════════════════════════════════════════════
-
-const MSAL_CONFIG = {
-  auth: {
-    clientId: CONFIG.clientId,
-    authority: `https://login.microsoftonline.com/${CONFIG.tenantId}`,
-    redirectUri: window.location.origin + window.location.pathname
-  },
-  cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false }
-};
-const GRAPH_SCOPES = ["User.Read", "Files.ReadWrite.All", "Sites.ReadWrite.All"];
-
-const msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
-let currentAccount = null;
-let selectedCategory = '';
-
-// Resolved at runtime
-let _driveId = null;
-let _fileId  = null;
-let _tableId = null;
-
-// ─── AUTH ───────────────────────────────────────────────────────
-async function signIn() {
-  document.getElementById('auth-error').style.display = 'none';
-  try {
-    const r = await msalInstance.loginPopup({ scopes: GRAPH_SCOPES });
-    currentAccount = r.account;
-    await onSignedIn();
-  } catch(e) {
-    console.error(e);
-    document.getElementById('auth-error').style.display = 'block';
+  function populateModels(type) {
+    const sel = document.getElementById('device_model');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Select model...</option>';
+    const groups = type === 'Voice' ? voiceModelGroups : type === 'Video' ? videoModelGroups : {};
+    Object.keys(groups).forEach(groupLabel => {
+      const optg = document.createElement('optgroup');
+      optg.label = groupLabel;
+      groups[groupLabel].forEach(m => {
+        const o = document.createElement('option');
+        o.value = m; o.textContent = m;
+        optg.appendChild(o);
+      });
+      sel.appendChild(optg);
+    });
+    const otherOpt = document.createElement('option');
+    otherOpt.value = 'Other'; otherOpt.textContent = 'Other / Not Listed';
+    sel.appendChild(otherOpt);
   }
-}
-function signOut() {
-  msalInstance.logoutPopup({ account: currentAccount });
-  currentAccount = null;
-  document.getElementById('auth-overlay').classList.remove('hidden');
-  document.getElementById('agent-bar').classList.remove('visible');
-  setGenerateEnabled(false);
-}
-async function onSignedIn() {
-  document.getElementById('auth-overlay').classList.add('hidden');
-  const name   = currentAccount.name || currentAccount.username;
-  const email  = currentAccount.username;
-  const initials = name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-  document.getElementById('agent-initials').textContent     = initials;
-  document.getElementById('agent-name-display').textContent = name;
-  document.getElementById('agent-email-display').textContent= email;
-  document.getElementById('agent-bar').classList.add('visible');
-  setGenerateEnabled(true);
-  await resolveExcelTarget();
-}
-async function tryRestoreSession() {
-  await msalInstance.initialize();
-  const accounts = msalInstance.getAllAccounts();
-  if (!accounts.length) return;
-  try {
-    currentAccount = accounts[0];
-    await msalInstance.acquireTokenSilent({ scopes: GRAPH_SCOPES, account: currentAccount });
-    await onSignedIn();
-  } catch(e) { console.log('Silent restore failed'); }
-}
-async function getToken() {
-  try {
-    const r = await msalInstance.acquireTokenSilent({ scopes: GRAPH_SCOPES, account: currentAccount });
-    return r.accessToken;
-  } catch(e) {
-    const r = await msalInstance.acquireTokenPopup({ scopes: GRAPH_SCOPES });
-    return r.accessToken;
+
+  function deviceModelChanged() {
+    const m = document.getElementById('device_model').value;
+    const custom = document.getElementById('device_model_custom');
+    const lbl = document.getElementById('lbl_device_model_custom');
+    if (m === 'Other') { custom.style.display = ''; lbl.style.display = 'block'; }
+    else { custom.style.display = 'none'; lbl.style.display = 'none'; if (custom) custom.value = ''; }
+    updateProgress();
   }
-}
-function setGenerateEnabled(v) {
-  document.getElementById('btn-generate').disabled        = !v;
-  document.getElementById('btn-generate-bottom').disabled = !v;
-}
 
-// ─── EXCEL TARGET RESOLUTION ────────────────────────────────────
-// Resolves the drive + file + table IDs once per session so appending
-// rows is a single fast API call.
-async function resolveExcelTarget() {
-  setXlStatus('warn', 'Locating Excel log file…');
-  try {
-    const token = await getToken();
-    const headers = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
-
-    // 1. Resolve the SharePoint site
-    const u = new URL(CONFIG.spSiteUrl);
-    const siteRes = await fetch(
-      `https://graph.microsoft.com/v1.0/sites/${u.hostname}:${u.pathname}`,
-      { headers }
-    );
-    if (!siteRes.ok) throw new Error(`Site not found (${siteRes.status}). Check spSiteUrl in CONFIG.`);
-    const site = await siteRes.json();
-
-    // 2. Find the drive (document library)
-    const drivesRes = await fetch(`https://graph.microsoft.com/v1.0/sites/${site.id}/drives`, { headers });
-    const drivesData = await drivesRes.json();
-    const drive = drivesData.value.find(d =>
-      d.name === CONFIG.driveAlias || d.webUrl.endsWith('/' + encodeURIComponent(CONFIG.driveAlias))
-    ) || drivesData.value[0]; // fallback to first drive
-    _driveId = drive.id;
-
-    // 3. Find the Excel file
-    const fileRes = await fetch(
-      `https://graph.microsoft.com/v1.0/drives/${_driveId}/root:/${encodeURIComponent(CONFIG.xlFileName)}`,
-      { headers }
-    );
-    if (!fileRes.ok) throw new Error(`Excel file "${CONFIG.xlFileName}" not found. Create it first — see setup instructions.`);
-    const file = await fileRes.json();
-    _fileId = file.id;
-
-    // 4. Find the table named "TriageLog" on the sheet
-    const tablesRes = await fetch(
-      `https://graph.microsoft.com/v1.0/drives/${_driveId}/items/${_fileId}/workbook/worksheets/${encodeURIComponent(CONFIG.xlSheetName)}/tables`,
-      { headers }
-    );
-    if (!tablesRes.ok) throw new Error(`Sheet "${CONFIG.xlSheetName}" not found or has no tables. See setup instructions.`);
-    const tablesData = await tablesRes.json();
-    const table = tablesData.value.find(t => t.name === 'TriageLog') || tablesData.value[0];
-    if (!table) throw new Error('No table found on the sheet. See setup instructions.');
-    _tableId = table.name;
-
-    setXlStatus('ok', `Excel log ready — appending to "${CONFIG.xlFileName}" → ${CONFIG.xlSheetName}`);
-  } catch(e) {
-    setXlStatus('error', 'Excel setup error: ' + e.message);
-    console.error(e);
-  }
-}
-
-function setXlStatus(type, msg) {
-  const bar = document.getElementById('xl-status-bar');
-  bar.className = 'visible ' + type;
-  document.getElementById('xl-status-text').textContent = msg;
-}
-
-// ─── APPEND ROW TO EXCEL ────────────────────────────────────────
-async function appendRowToExcel(row) {
-  if (!_driveId || !_fileId || !_tableId) return false;
-  try {
-    const token = await getToken();
-    const res = await fetch(
-      `https://graph.microsoft.com/v1.0/drives/${_driveId}/items/${_fileId}/workbook/worksheets/${encodeURIComponent(CONFIG.xlSheetName)}/tables/${_tableId}/rows`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + token,
-          'Content-Type': 'application/json'
-        },
-        // Graph expects values as array-of-arrays
-        body: JSON.stringify({ values: [row] })
-      }
-    );
-    return res.ok;
-  } catch(e) {
-    console.error('Excel append error:', e);
-    return false;
-  }
-}
-
-// ─── DEVICE MODELS ──────────────────────────────────────────────
-const videoModelGroups = {
-  'All-in-One Video Bars':['Poly Studio X32','Poly Studio X52','Poly Studio X72','Poly Studio X30','Poly Studio X50','Poly Studio X70'],
-  'USB Video Bars':['Poly Studio V12','Poly Studio V52','Poly Studio V72','Poly Studio USB','Poly Studio R30'],
-  'Modular Room Systems / Codecs':['Poly Studio G62','Poly Studio G7500'],
-  'Cameras & Video Accessories':['Poly Studio E60','Poly Studio E70','Poly TC8','Poly TC10'],
-  'Conference Phones / Speakerphones':['Poly Trio C60','Poly Trio 8300','Poly Trio 8800','Poly SoundStation']
-};
-const voiceModelGroups = {
-  'IP Desk Phones (VVX Series)':['Poly VVX 150','Poly VVX 201','Poly VVX 250','Poly VVX 350','Poly VVX 450','Poly VVX 500'],
-  'CCX Series':['Poly CCX 400','Poly CCX 500','Poly CCX 600','Poly CCX 700'],
-  'Edge Series Phones':['Poly Edge B10','Poly Edge B20','Poly Edge B30','Poly Edge E500','Poly Edge E550']
-};
-function populateModels(type) {
-  const sel = document.getElementById('device_model');
-  sel.innerHTML = '<option value="">Select model…</option>';
-  const groups = type==='Voice'?voiceModelGroups:type==='Video'?videoModelGroups:{};
-  Object.keys(groups).forEach(g => {
-    const og = document.createElement('optgroup'); og.label=g;
-    groups[g].forEach(m=>{ const o=document.createElement('option');o.value=m;o.textContent=m;og.appendChild(o); });
-    sel.appendChild(og);
-  });
-  const o=document.createElement('option');o.value='Other';o.textContent='Other / Not Listed';sel.appendChild(o);
-}
-function deviceModelChanged() {
-  const m=document.getElementById('device_model').value;
-  const c=document.getElementById('device_model_custom'),l=document.getElementById('lbl_device_model_custom');
-  if(m==='Other'){c.style.display='';l.style.display='block';}
-  else{c.style.display='none';l.style.display='none';c.value='';}
-  updateProgress();
-}
-function deviceTypeChanged() {
-  const t=document.getElementById('device_type').value;
-  populateModels(t);
-  document.getElementById('card_issue_category').style.display=t==='Video'?'':'none';
-  document.getElementById('issue_category_label').style.display=t==='Video'?'':'none';
-  ['power','video','audio','touch','network','ecosystem','performance','peripherals','other'].forEach(k=>{
-    document.getElementById('ctx-'+k)?.classList.remove('visible');
-  });
-  const ft=document.getElementById('fw_touch'),fl=document.getElementById('lbl_fw_touch');
-  if(t==='Video'){ft.style.display='';fl.style.display='block';}
-  else{ft.style.display='none';ft.value='';fl.style.display='none';}
-  if(t==='Voice'){selectedCategory='';document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));document.getElementById('issue_category').value='';}
-  const dc=document.getElementById('data_checklist');
-  dc.innerHTML=t==='Voice'
-    ?'<div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>PBU / Logs collected</span></div>'
-    :'<div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Logs collected (uploaded to file exchange)</span></div><div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Time stamps collected (if applicable)</span></div><div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Photos / Video evidence collected (if applicable)</span></div>';
-  updateProgress();
-}
-function selectCategory(btn,category) {
-  selectedCategory=category;
-  document.getElementById('issue_category').value=category;
-  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  const keys={'Power ON/OFF':'power','Video':'video','Audio':'audio','Touch Panel':'touch','Network':'network','Eco System':'ecosystem','Performance':'performance','Peripherals':'peripherals','Other':'other'};
-  Object.values(keys).forEach(k=>document.getElementById('ctx-'+k)?.classList.remove('visible'));
-  const key=keys[category];
-  if(key){document.getElementById('ctx-'+key)?.classList.add('visible');}
-  renderChecklistForCategory(category);
-}
-function subSelectChanged(id) {
-  const sel=document.getElementById(id),other=document.getElementById(id+'_other'),lbl=document.getElementById('lbl_'+id+'_other');
-  if(!sel)return;
-  if(sel.value==='Other'){other&&(other.style.display='');lbl&&(lbl.style.display='block');other?.focus();}
-  else{other&&(other.style.display='none',other.value='');lbl&&(lbl.style.display='none');}
-}
-function updateProgress() {
-  if(!currentAccount)return;
-  const modelSel=document.getElementById('device_model'),modelCustom=document.getElementById('device_model_custom');
-  const modelFilled=(modelSel?.value&&modelSel.value!=='')||(modelCustom?.value?.trim());
-  const fields=['customer_name','contact_number','serial','issue_desc'];
-  let filled=modelFilled?1:0;
-  fields.forEach(id=>{const el=document.getElementById(id);if(el?.value?.toString().trim())filled++;});
-  document.getElementById('progress').style.width=Math.round(filled/(fields.length+1)*100)+'%';
-}
-
-// ─── CHECKLIST ──────────────────────────────────────────────────
-const checklistTemplates = {
-  'Power ON/OFF':[
-    {id:'chk_power_source',label:'Power source verified',type:'select',options:['Mains (AC)','PoE','PoE injector','Unknown']},
-    {id:'chk_power_cable',label:'Power cable / connector inspected',type:'check'},
-    {id:'chk_power_led',label:'LED status and pattern noted',type:'text',placeholder:'e.g. solid green / blinking amber'},
-    {id:'chk_power_damage',label:'Physical damage / burn smell',type:'text',placeholder:'Describe if any'},
-    {id:'chk_power_reboot',label:'Reboot done (device / PSU)',type:'check'}
-  ],
-  'Video':[
-    {id:'chk_video_cables',label:'HDMI / Display connections verified',type:'check'},
-    {id:'chk_video_firmware',label:'Device firmware verified',type:'text',placeholder:'fw_device / provider_fw'},
-    {id:'chk_video_display',label:'Display evidence (photo / recording)',type:'text',placeholder:'attachment name / link'},
-    {id:'chk_video_txrx',label:'TX / RX issue confirmed',type:'select',options:['TX','RX','Both','Unknown']},
-    {id:'chk_video_reboot',label:'Reboot done (device)',type:'check'}
-  ],
-  'Audio':[
-    {id:'chk_audio_mic_conn',label:'Microphone connection type',type:'select',options:['Integrated','USB','Analog (XLR/3.5mm)','Daisy-chain','IP (networked)','Unknown']},
-    {id:'chk_audio_mic_webui',label:'Microphone visible in device management (web UI)?',type:'select',options:['Yes','No','Unknown']},
-    {id:'chk_audio_mic_count',label:'Number of mics connected',type:'text',placeholder:'e.g. 2 (ceiling) + 1 R30'},
-    {id:'chk_audio_speaker',label:'Speaker / audio device verified',type:'check'},
-    {id:'chk_audio_recording',label:'Recorded audio sample collected',type:'check'},
-    {id:'chk_audio_reboot',label:'Reboot done (device / audio subsystem)',type:'check'}
-  ],
-  'Touch Panel':[
-    {id:'chk_touch_conn',label:'Touch panel connectivity',type:'text',placeholder:'e.g. same VLAN / USB to codec'},
-    {id:'chk_touch_fw',label:'Touch panel firmware verified',type:'text',placeholder:'fw_touch'},
-    {id:'chk_touch_reboot',label:'Reboot done (touch panel)',type:'check'}
-  ],
-  'Network':[
-    {id:'chk_net_ip',label:'IP assigned (collect IP)',type:'text',placeholder:'e.g. 10.1.2.34'},
-    {id:'chk_net_ping',label:'Ping / traceroute performed (attach results)',type:'text',placeholder:'attachment name / link'},
-    {id:'chk_net_ports',label:'Required ports / IPs reachable',type:'check'},
-    {id:'chk_net_reboot',label:'Reboot done (network device / codec)',type:'check'}
-  ],
-  'Eco System':[
-    {id:'chk_eco_platform',label:'Platform / app version checked',type:'text',placeholder:'Teams / Zoom / Google version'},
-    {id:'chk_eco_signin',label:'Sign-in / license validated',type:'check'},
-    {id:'chk_eco_datetime',label:'Date & Time (NTP) correct?',type:'select',options:['Yes','No','Unknown']}
-  ],
-  'Performance':[
-    {id:'chk_perf_after_fw',label:'Issue started after FW upgrade?',type:'select',options:['Yes','No','Unknown']},
-    {id:'chk_perf_reboot',label:'Reboot done (device)',type:'check'}
-  ],
-  'Peripherals':[
-    {id:'chk_peri_detect',label:'Peripheral detected by device',type:'check'},
-    {id:'chk_peri_connectivity',label:'Connectivity checked (cable / USB / BT)',type:'check'},
-    {id:'chk_peri_extenders',label:'Extenders / repeaters used',type:'select',options:['Yes','No','Unknown']},
-    {id:'chk_peri_correct_port',label:'Connected to correct port / compatible?',type:'select',options:['Yes','No','Unknown']},
-    {id:'chk_peri_model',label:'Peripheral model / vendor',type:'text',placeholder:'e.g. Logitech PTZ'},
-    {id:'chk_peri_reboot',label:'Reboot done (device / peripheral)',type:'check'}
-  ],
-  'Other':[
-    {id:'chk_other_tsnotes',label:'Troubleshooting notes',type:'text',placeholder:'Enter troubleshooting notes / observations'},
-    {id:'chk_other_reboot',label:'Reboot done (if applicable)',type:'check'}
-  ]
-};
-function renderChecklistForCategory(category) {
-  const deviceType=document.getElementById('device_type').value;
-  const container=document.getElementById('checklist');
-  container.innerHTML='';
-  if(category==='Other'||deviceType==='Voice'){
-    const h=document.createElement('div');h.style.cssText='color:var(--text-muted);font-size:13px;padding:4px';
-    h.textContent=deviceType==='Voice'?'Voice device — use the troubleshooting notes field below.':'Other category — use the troubleshooting notes field below.';
-    container.appendChild(h);return;
-  }
-  (checklistTemplates[category]||checklistTemplates['Other']).forEach(item=>{
-    const div=document.createElement('div');div.className='check-item';div.dataset.chkId=item.id;
-    div.onclick=()=>toggleCheck(div);
-    const cb=document.createElement('div');cb.className='cb';div.appendChild(cb);
-    const sp=document.createElement('span');sp.textContent=item.label;div.appendChild(sp);
-    if(item.type==='text'){
-      const inp=document.createElement('input');inp.type='text';inp.placeholder=item.placeholder||'';
-      inp.style.cssText='margin-top:8px;width:100%;font-family:var(--mono);font-size:13px';
-      inp.onclick=e=>e.stopPropagation();inp.oninput=()=>{if(!div.classList.contains('checked'))div.classList.add('checked');};
-      div.appendChild(inp);
-    }else if(item.type==='select'){
-      const sel=document.createElement('select');
-      const emp=document.createElement('option');emp.value='';emp.textContent='Select...';sel.appendChild(emp);
-      (item.options||[]).forEach(opt=>{const o=document.createElement('option');o.value=opt;o.textContent=opt;sel.appendChild(o);});
-      sel.style.cssText='margin-top:8px;font-size:13px';
-      sel.onclick=e=>e.stopPropagation();sel.onchange=()=>{if(!div.classList.contains('checked'))div.classList.add('checked');};
-      div.appendChild(sel);
+  function deviceTypeChanged() {
+    const t = document.getElementById('device_type').value;
+    populateModels(t);
+    const cardCat = document.getElementById('card_issue_category');
+    const catLabel = document.getElementById('issue_category_label');
+    if (cardCat) cardCat.style.display = t === 'Video' ? '' : 'none';
+    if (catLabel) catLabel.style.display = t === 'Video' ? '' : 'none';
+    ['power','video','audio','touch','network','ecosystem','performance','peripherals','other'].forEach(k => {
+      const el = document.getElementById('ctx-'+k);
+      if (el) el.classList.remove('visible');
+    });
+    const fwTouch = document.getElementById('fw_touch');
+    const fwTouchLbl = document.getElementById('lbl_fw_touch');
+    if (t === 'Video') {
+      if (fwTouch) fwTouch.style.display = '';
+      if (fwTouchLbl) fwTouchLbl.style.display = 'block';
+    } else {
+      if (fwTouch) { fwTouch.style.display = 'none'; fwTouch.value = ''; }
+      if (fwTouchLbl) fwTouchLbl.style.display = 'none';
     }
-    container.appendChild(div);
-  });
-}
-function toggleCheck(el){
-  el.classList.toggle('checked');
-  const ci=el.querySelector('input,select,textarea');
-  if(el.classList.contains('checked')&&ci)ci.focus();
-}
-function summarizeChecklist(category) {
-  const deviceType=document.getElementById('device_type').value;
-  const container=document.getElementById('checklist');
-  if(!container||category==='Other'||deviceType==='Voice')return[];
-  return (checklistTemplates[category]||checklistTemplates['Other']).map(item=>{
-    const el=container.querySelector(`.check-item[data-chk-id="${item.id}"]`);
-    const checked=el?.classList.contains('checked');
-    const input=el?.querySelector('input,select,textarea');
-    const v=input?.value?.toString().trim()||null;
-    return{label:item.label,value:v||(checked?'Yes':'No')};
-  });
-}
-function summarizeDataCollected() {
-  return Array.from(document.getElementById('data_checklist').querySelectorAll('.check-item')).map(n=>({
-    label:n.querySelector('span')?.textContent.trim()||'',
-    value:n.classList.contains('checked')?'Yes':'No'
-  }));
-}
-
-// ─── GENERATE & SAVE ────────────────────────────────────────────
-async function generateNote() {
-  if(!currentAccount){showToast('Please sign in first.','red');return;}
-  const now=new Date();
-  const ts=now.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  const isoTs=now.toISOString();
-  const LINE_WIDTH=48,TOP_BAR='='.repeat(LINE_WIDTH),SEC_BAR='-'.repeat(LINE_WIDTH);
-  const agentName=currentAccount.name||currentAccount.username;
-  const agentEmail=currentAccount.username;
-  const agentOID=currentAccount.localAccountId||currentAccount.homeAccountId||'';
-  const deviceType=val('device_type')||'';
-  let deviceModel=val('device_model');
-  if(deviceModel==='Other')deviceModel=val('device_model_custom')||'';
-  const cat=val('issue_category')||selectedCategory||'';
-  const chk=summarizeChecklist(cat);
-  const tsLines=chk?.length?chk.map(r=>`${r.label} : ${r.value}`):['Checklist : See notes below'];
-  const data=summarizeDataCollected();
-  const dataLines=data?.length?data.map(d=>`${d.label} : ${d.value}`):['(no data collected)'];
-  const elevated=isFinalEscalate();
-
-  const noteParts=[
-    TOP_BAR,'CCC TRIAGE NOTE',
-    `Generated  : ${ts}`,`Agent      : ${agentName}`,`Agent Email: ${agentEmail}`,`Agent OID  : ${agentOID}`,
-    TOP_BAR,'',
-    SEC_BAR,'CUSTOMER',SEC_BAR,
-    `Full Name      : ${val('customer_name')}`,`Contact Number : ${val('contact_number')}`,
-    `Country        : ${val('country')}`,`Email Address  : ${val('email_address')}`,
-    `Company        : ${val('company')}`,`BTTR           : ${val('bttr')}`,`APN            : ${val('apn')}`,
-    '',SEC_BAR,'DEVICE',SEC_BAR,
-    `Device Model       : ${deviceModel}`,`Serial Number      : ${val('serial')}`,
-    `Firmware (Device)  : ${val('fw_device')}`,`Provider Name      : ${val('provider_name')}`,
-    `Provider FW        : ${val('provider_fw')}`,
-    ...(deviceType==='Video'?[`Firmware (Touch)   : ${val('fw_touch')}`]:[]),
-    '',SEC_BAR,'ISSUE',SEC_BAR,
-    `Category         : ${cat}`,`Out Of the Box   : ${val('is_oob')}`,`Reproducible     : ${val('reproducible')}`,
-    ...(val('repro_desc')?[`Repro Steps      : ${val('repro_desc')}`]:[]),
-    '','Issue Description:',val('issue_desc')||'',
-    '',SEC_BAR,'TROUBLESHOOTING PERFORMED',SEC_BAR,...tsLines,
-    '','Notes:',val('ts_notes')||'',
-    '',SEC_BAR,'MANDATORY DATA COLLECTED',SEC_BAR,...dataLines,
-    '',SEC_BAR,'ESCALATION',SEC_BAR,`Elevate to L1.5 : ${elevated?'Yes':'No'}`,
-    '','Additional Notes:',val('additional_notes')||'',
-    '',TOP_BAR
-  ];
-  const note=noteParts.join('\n');
-
-  document.getElementById('output-box').textContent=note;
-  document.getElementById('output-meta').textContent='Generated at '+ts;
-  const outSec=document.getElementById('output-section');
-  outSec.classList.add('visible');
-  outSec.scrollIntoView({behavior:'smooth',block:'start'});
-  window._generatedNote=note;
-
-  // ── EXCEL APPEND ──────────────────────────────────
-  // Row order must match the table columns in the workbook.
-  // Columns (in order): Timestamp | AgentName | AgentEmail | AgentOID |
-  //   CustomerName | CustomerEmail | Company | Country |
-  //   DeviceType | DeviceModel | SerialNumber | FirmwareDevice | ProviderName |
-  //   IssueCategory | OOB | Reproducible | EscalatedL15 | FullNote
-  const row = [
-    isoTs, agentName, agentEmail, agentOID,
-    val('customer_name'), val('email_address'), val('company'), val('country'),
-    deviceType, deviceModel, val('serial'), val('fw_device'), val('provider_name'),
-    cat, val('is_oob'), val('reproducible'), elevated ? 'Yes' : 'No',
-    note
-  ];
-
-  setSaveStatus('saving','Saving to Excel…');
-  const ok = await appendRowToExcel(row);
-  if(ok){
-    setSaveStatus('saved','Saved to Excel ✓');
-    showToast('Row appended to Excel log','green');
-  } else {
-    setSaveStatus('failed','Excel save failed — copy note manually');
-    showToast('Excel save failed','red');
+    if (t === 'Voice') {
+      selectedCategory = '';
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      const ic = document.getElementById('issue_category');
+      if (ic) ic.value = '';
+    }
+    const dataContainer = document.getElementById('data_checklist');
+    if (dataContainer) {
+      if (t === 'Voice') {
+        dataContainer.innerHTML = '<div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>PBU / Logs collected</span></div>';
+      } else {
+        dataContainer.innerHTML =
+          '<div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Logs collected (uploaded to file exchange)</span></div>' +
+          '<div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Time stamps collected (if applicable)</span></div>' +
+          '<div class="check-item" onclick="toggleCheck(this)"><div class="cb"></div><span>Photos / Video evidence collected (if applicable)</span></div>';
+      }
+    }
+    updateProgress();
   }
-}
 
-function setSaveStatus(state,msg){
-  const el=document.getElementById('save-status-indicator');
-  el.className='save-status '+state;el.textContent=msg;
-}
-function reproducibleChanged(){
-  const v=val('reproducible'),d=document.getElementById('repro_details');
-  d.style.display=(v&&v!=='No — happened once'&&v!=='Not yet tested')?'':'none';
-}
-function copyNote(){
-  const n=window._generatedNote||document.getElementById('output-box').textContent||'';
-  if(!n)return;
-  navigator.clipboard?.writeText(n).then(()=>showToast('Copied to clipboard'));
-}
-function downloadNote(){
-  const n=window._generatedNote||document.getElementById('output-box').textContent||'';
-  if(!n)return;
-  const b=new Blob([n],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');
-  a.href=u;a.download='triage_note.txt';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u);
-}
-function resetForm(){
-  if(!confirm('Reset all fields and start a new triage note?'))return;
-  document.querySelectorAll('input:not([type=hidden]),select,textarea').forEach(el=>{
-    if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';
+  function selectCategory(btn, category) {
+    selectedCategory = category;
+    const hidden = document.getElementById('issue_category');
+    if (hidden) hidden.value = category;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    if (btn && btn.classList) btn.classList.add('active');
+    const keys = {
+      'Power ON/OFF':'power','Video':'video','Audio':'audio','Touch Panel':'touch',
+      'Network':'network','Eco System':'ecosystem','Performance':'performance',
+      'Peripherals':'peripherals','Other':'other'
+    };
+    Object.values(keys).forEach(k => {
+      const el = document.getElementById('ctx-'+k);
+      if (el) el.classList.remove('visible');
+    });
+    const key = keys[category];
+    if (key) {
+      const el = document.getElementById('ctx-'+key);
+      if (el) el.classList.add('visible');
+    }
+    renderChecklistForCategory(category);
+    if (key) {
+      const ctx = document.getElementById('ctx-'+key);
+      if (ctx) { const f = ctx.querySelector('select, input, textarea'); if (f) f.focus(); }
+    }
+  }
+
+  function subSelectChanged(id) {
+    const sel = document.getElementById(id);
+    const other = document.getElementById(id+'_other');
+    const lbl = document.getElementById('lbl_'+id+'_other');
+    if (!sel) return;
+    if (sel.value === 'Other') {
+      if (other) other.style.display = '';
+      if (lbl) lbl.style.display = 'block';
+      if (other) other.focus();
+    } else {
+      if (other) { other.style.display = 'none'; other.value = ''; }
+      if (lbl) lbl.style.display = 'none';
+    }
+  }
+
+  function updateProgress() {
+    const modelSel = document.getElementById('device_model');
+    const modelCustom = document.getElementById('device_model_custom');
+    const modelFilled = (modelSel && modelSel.value && modelSel.value !== '') || (modelCustom && modelCustom.value && modelCustom.value.trim());
+    const fields = ['customer_name','contact_number','serial','issue_desc'];
+    let filled = modelFilled ? 1 : 0;
+    fields.forEach(id => { const el = document.getElementById(id); if (el && el.value && el.value.toString().trim()) filled++; });
+    const pct = Math.round((filled / (fields.length + 1)) * 100);
+    const bar = document.getElementById('progress');
+    if (bar) bar.style.width = pct + '%';
+  }
+
+  const checklistTemplates = {
+    'Power ON/OFF': [
+      { id: 'chk_power_source', label: 'Power source verified', type: 'select', options: ['Mains (AC)','PoE','PoE injector','Unknown'] },
+      { id: 'chk_power_cable', label: 'Power cable / connector inspected', type: 'check' },
+      { id: 'chk_power_led', label: 'LED status and pattern noted', type: 'text', placeholder: 'e.g. solid green / blinking amber' },
+      { id: 'chk_power_damage', label: 'Physical damage / burn smell', type: 'text', placeholder: 'Describe if any' },
+      { id: 'chk_power_reboot', label: 'Reboot done (device / PSU)', type: 'check' }
+    ],
+    'Video': [
+      { id: 'chk_video_cables', label: 'HDMI / Display connections verified', type: 'check' },
+      { id: 'chk_video_firmware', label: 'Device firmware verified', type: 'text', placeholder: 'fw_device / provider_fw' },
+      { id: 'chk_video_display', label: 'Display evidence (photo / recording)', type: 'text', placeholder: 'attachment name / link' },
+      { id: 'chk_video_txrx', label: 'TX / RX issue confirmed', type: 'select', options: ['TX','RX','Both','Unknown'] },
+      { id: 'chk_video_reboot', label: 'Reboot done (device)', type: 'check' }
+    ],
+    'Audio': [
+      { id: 'chk_audio_mic_conn', label: 'Microphone connection type', type: 'select', options: ['Integrated','USB','Analog (XLR/3.5mm)','Daisy-chain','IP (networked)','Unknown'] },
+      { id: 'chk_audio_mic_webui', label: 'Microphone visible in device management (web UI)?', type: 'select', options: ['Yes','No','Unknown'] },
+      { id: 'chk_audio_mic_count', label: 'Number of mics connected', type: 'text', placeholder: 'e.g. 2 (ceiling) + 1 R30' },
+      { id: 'chk_audio_speaker', label: 'Speaker / audio device verified', type: 'check' },
+      { id: 'chk_audio_recording', label: 'Recorded audio sample collected', type: 'check' },
+      { id: 'chk_audio_reboot', label: 'Reboot done (device / audio subsystem)', type: 'check' }
+    ],
+    'Touch Panel': [
+      { id: 'chk_touch_conn', label: 'Touch panel connectivity', type: 'text', placeholder: 'e.g. same VLAN / USB to codec' },
+      { id: 'chk_touch_fw', label: 'Touch panel firmware verified', type: 'text', placeholder: 'fw_touch' },
+      { id: 'chk_touch_reboot', label: 'Reboot done (touch panel)', type: 'check' }
+    ],
+    'Network': [
+      { id: 'chk_net_ip', label: 'IP assigned (collect IP)', type: 'text', placeholder: 'e.g. 10.1.2.34' },
+      { id: 'chk_net_ping', label: 'Ping / traceroute performed (attach results)', type: 'text', placeholder: 'attachment name / link' },
+      { id: 'chk_net_ports', label: 'Required ports / IPs reachable', type: 'check' },
+      { id: 'chk_net_reboot', label: 'Reboot done (network device / codec)', type: 'check' }
+    ],
+    'Eco System': [
+      { id: 'chk_eco_platform', label: 'Platform / app version checked', type: 'text', placeholder: 'Teams / Zoom / Google version' },
+      { id: 'chk_eco_signin', label: 'Sign-in / license validated', type: 'check' },
+      { id: 'chk_eco_datetime', label: 'Date & Time (NTP) correct?', type: 'select', options: ['Yes','No','Unknown'] }
+    ],
+    'Performance': [
+      { id: 'chk_perf_after_fw', label: 'Issue started after FW upgrade?', type: 'select', options: ['Yes','No','Unknown'] },
+      { id: 'chk_perf_reboot', label: 'Reboot done (device)', type: 'check' }
+    ],
+    'Peripherals': [
+      { id: 'chk_peri_detect', label: 'Peripheral detected by device', type: 'check' },
+      { id: 'chk_peri_connectivity', label: 'Connectivity checked (cable / USB / BT)', type: 'check' },
+      { id: 'chk_peri_extenders', label: 'Extenders / repeaters used', type: 'select', options: ['Yes','No','Unknown'] },
+      { id: 'chk_peri_correct_port', label: 'Connected to correct port / compatible?', type: 'select', options: ['Yes','No','Unknown'] },
+      { id: 'chk_peri_model', label: 'Peripheral model / vendor', type: 'text', placeholder: 'e.g. Logitech PTZ' },
+      { id: 'chk_peri_reboot', label: 'Reboot done (device / peripheral)', type: 'check' }
+    ],
+    'Other': [
+      { id: 'chk_other_tsnotes', label: 'Troubleshooting notes', type: 'text', placeholder: 'Enter troubleshooting notes / observations' },
+      { id: 'chk_other_reboot', label: 'Reboot done (if applicable)', type: 'check' }
+    ]
+  };
+
+  function renderChecklistForCategory(category) {
+    const deviceType = document.getElementById('device_type').value;
+    const container = document.getElementById('checklist');
+    if (!container) return;
+    container.innerHTML = '';
+    if (category === 'Other' || deviceType === 'Voice') {
+      const hint = document.createElement('div');
+      hint.style.cssText = 'color:var(--text-muted);font-size:13px;padding:4px';
+      hint.textContent = deviceType === 'Voice'
+        ? 'Voice device — use the troubleshooting notes field below.'
+        : 'Other category — use the troubleshooting notes field below.';
+      container.appendChild(hint);
+      return;
+    }
+    const tmpl = checklistTemplates[category] || checklistTemplates['Other'];
+    tmpl.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'check-item';
+      div.dataset.chkId = item.id;
+      div.onclick = () => toggleCheck(div);
+      const cb = document.createElement('div'); cb.className = 'cb'; div.appendChild(cb);
+      const span = document.createElement('span'); span.textContent = item.label; div.appendChild(span);
+      if (item.type === 'text') {
+        const inp = document.createElement('input');
+        inp.type = 'text'; inp.placeholder = item.placeholder || '';
+        inp.style.cssText = 'margin-top:8px;width:100%;font-family:var(--mono);font-size:13px';
+        inp.dataset.parentChk = item.id;
+        inp.onclick = e => e.stopPropagation();
+        inp.oninput = () => { if (!div.classList.contains('checked')) div.classList.add('checked'); };
+        div.appendChild(inp);
+      } else if (item.type === 'select') {
+        const sel = document.createElement('select');
+        const empty = document.createElement('option'); empty.value = ''; empty.textContent = 'Select...'; sel.appendChild(empty);
+        (item.options || []).forEach(opt => {
+          const o = document.createElement('option'); o.value = opt; o.textContent = opt; sel.appendChild(o);
+        });
+        sel.style.cssText = 'margin-top:8px;font-size:13px';
+        sel.dataset.parentChk = item.id;
+        sel.onclick = e => e.stopPropagation();
+        sel.onchange = () => { if (!div.classList.contains('checked')) div.classList.add('checked'); };
+        div.appendChild(sel);
+      }
+      container.appendChild(div);
+    });
+  }
+
+  function toggleCheck(el) {
+    if (!el) return;
+    el.classList.toggle('checked');
+    const childInput = el.querySelector('input, select, textarea');
+    if (el.classList.contains('checked') && childInput) childInput.focus();
+  }
+
+  function summarizeChecklist(category) {
+    const deviceType = val('device_type') || 'Video';
+    const container = document.getElementById('checklist');
+    if (!container) return [];
+    if (category === 'Other' || deviceType === 'Voice') return [];
+    const tmpl = checklistTemplates[category] || checklistTemplates['Other'];
+    return tmpl.map(item => {
+      const el = container.querySelector(`.check-item[data-chk-id="${item.id}"]`);
+      const checked = el && el.classList.contains('checked');
+      const input = el ? el.querySelector('input, select, textarea') : null;
+      const v = input && input.value && input.value.toString().trim() ? input.value.toString().trim() : null;
+      return { label: item.label, value: v || (checked ? 'Yes' : 'No') };
+    });
+  }
+
+  function summarizeDataCollected() {
+    const container = document.getElementById('data_checklist');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.check-item')).map(n => {
+      const s = n.querySelector('span') ? n.querySelector('span').textContent.trim() : '';
+      return { label: s, value: n.classList.contains('checked') ? 'Yes' : 'No' };
+    });
+  }
+
+  // ── OUTPUT FORMATTING ──
+  // Produces a clean, evenly-spaced plain-text note safe to paste anywhere.
+  // Uses a fixed separator line width and simple "Label ........... Value" dot-leader format.
+  // No special chars, no emoji, no markdown.
+
+  function dotLine(label, value, width) {
+    // width = total line width including label, dots, and value
+    label = (label || '').toString();
+    value = (value || '—').toString();
+    const gap = width - label.length - value.length - 2; // 2 for spaces around dots
+    const dots = gap > 2 ? '.'.repeat(gap) : ' ';
+    return label + ' ' + dots + ' ' + value;
+  }
+
+  function section(title, lines, lineWidth) {
+    const bar = '-'.repeat(lineWidth);
+    const header = title.toUpperCase();
+    const rows = lines.map(l => {
+      if (typeof l === 'string') return l;
+      return dotLine(l.label, l.value, lineWidth);
+    });
+    return [bar, header, bar, ...rows].join('\n');
+  }
+
+  function generateNote() {
+    const now = new Date();
+    const ts = now.toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    const LINE_WIDTH = 48;
+    const TOP_BAR = '='.repeat(LINE_WIDTH);
+    const SEC_BAR = '-'.repeat(LINE_WIDTH);
+
+    const deviceType = val('device_type') || '';
+    let deviceModel = val('device_model');
+    if (deviceModel === 'Other') deviceModel = val('device_model_custom') || '';
+    if (!deviceModel) deviceModel = '';
+
+    // Customer block
+    const customerLines = [
+      `Full Name : ${val('customer_name')}`,
+      `Contact number : ${val('contact_number')}`,
+      `Country : ${val('country')}`,
+      `Email Address : ${val('email_address')}`,
+      `Company : ${val('company')}`,
+      `BTTR : ${val('bttr')}`,
+      `APN : ${val('apn')}`
+    ].join('\n');
+
+    // Device block
+    const deviceLinesArr = [
+      `Device Model : ${deviceModel}`,
+      `Serial Number : ${val('serial')}`,
+      `Firmware (Device) : ${val('fw_device')}`,
+      `Provider Name : ${val('provider_name')}`,
+      `Provider FW : ${val('provider_fw')}`
+    ];
+    if (deviceType === 'Video') deviceLinesArr.push(`Firmware (Touch) : ${val('fw_touch')}`);
+    const deviceLines = deviceLinesArr.join('\n');
+
+    // Issue block
+    const cat = val('issue_category') || selectedCategory || '';
+    const issueLinesArr = [
+      `Category : ${cat}`,
+      `Out Of the Box Device : ${val('is_oob')}`,
+      `Is issue Reproducible : ${val('reproducible')}`
+    ];
+    if (val('repro_desc')) issueLinesArr.push(`Repro Steps : ${val('repro_desc')}`);
+    const issueLines = issueLinesArr.join('\n');
+    const issueDescription = val('issue_desc');
+
+    // Troubleshooting performed
+    const chk = summarizeChecklist(cat);
+    let tsLines = [];
+    if (chk && chk.length) {
+      tsLines = chk.map(r => `${r.label} : ${r.value}`);
+    } else {
+      tsLines = ['Checklist : See notes below'];
+    }
+
+    // Data collected
+    const data = summarizeDataCollected();
+    const dataLines = (data && data.length) ? data.map(d => `${d.label} : ${d.value}`) : ['(no data collected)'];
+
+    // Escalation / final notes
+    const elevated = isFinalEscalate() ? 'Yes' : 'No';
+    const addNotes = val('additional_notes');
+
+    // Assemble final note
+    const noteParts = [
+      TOP_BAR,
+      'CCC TRIAGE NOTE',
+      `Generated: ${ts}`,
+      TOP_BAR,
+      '',
+      SEC_BAR,
+      'CUSTOMER',
+      SEC_BAR,
+      customerLines,
+      '',
+      SEC_BAR,
+      'DEVICE',
+      SEC_BAR,
+      deviceLines,
+      '',
+      SEC_BAR,
+      'ISSUE',
+      SEC_BAR,
+      issueLines,
+      '',
+      'Issue Description:',
+      issueDescription || '',
+      '',
+      SEC_BAR,
+      'TROUBLESHOOTING PERFORMED',
+      SEC_BAR,
+      ...tsLines,
+      '',
+      'Notes:',
+      val('ts_notes') || '',
+      '',
+      SEC_BAR,
+      'MANDATORY DATA COLLECTED',
+      SEC_BAR,
+      ...dataLines,
+      '',
+      SEC_BAR,
+      'ESCALATION',
+      SEC_BAR,
+      `Elevate to L1.5 : ${elevated}`,
+      '',
+      'Additional Notes:',
+      addNotes || '',
+      '',
+      '='.repeat(LINE_WIDTH)
+    ];
+
+    const note = noteParts.join('\n');
+
+    const out = document.getElementById('output-box');
+    const meta = document.getElementById('output-meta');
+    if (out) out.textContent = note;
+    if (meta) meta.textContent = 'Generated at ' + ts;
+    const section_ = document.getElementById('output-section');
+    if (section_) section_.classList.add('visible');
+    if (section_) section_.scrollIntoView({ behavior:'smooth', block:'start' });
+    window._generatedNote = note;
+  }
+
+  function reproducibleChanged() {
+    const v = val('reproducible');
+    const d = document.getElementById('repro_details');
+    if (d) d.style.display = (v && v !== 'No — happened once' && v !== 'Not yet tested') ? '' : 'none';
+  }
+
+  function copyNote() {
+    const note = window._generatedNote || document.getElementById('output-box').textContent || '';
+    if (!note) return;
+    navigator.clipboard && navigator.clipboard.writeText(note).then(() => {
+      const t = document.getElementById('toast');
+      if (t) { t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 1600); }
+    });
+  }
+
+  function downloadNote() {
+    const note = window._generatedNote || document.getElementById('output-box').textContent || '';
+    if (!note) return;
+    const blob = new Blob([note], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'triage_note.txt';
+    document.body.appendChild(a); a.click();
+    a.remove(); URL.revokeObjectURL(url);
+  }
+
+  function resetForm() {
+    if (!confirm('Reset all fields and start a new triage note?')) return;
+    document.querySelectorAll('input:not([type=hidden]), select, textarea').forEach(el => {
+      if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = '';
+    });
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.check-item').forEach(el => el.classList.remove('checked'));
+    document.querySelectorAll('.context-section').forEach(el => el.classList.remove('visible'));
+    selectedCategory = '';
+    document.getElementById('progress').style.width = '0%';
+    const out = document.getElementById('output-section'); if (out) out.classList.remove('visible');
+    window._generatedNote = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function val(id) {
+    const el = document.getElementById(id);
+    if (!el) return '';
+    return (el.value || '').toString().trim();
+  }
+
+  function isFinalEscalate() {
+    const el = document.getElementById('final_escalation');
+    if (!el) return false;
+    return !!el.querySelector('.check-item.checked');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const dt = document.getElementById('device_type');
+    if (dt) populateModels(dt.value);
+    try { deviceTypeChanged(); deviceModelChanged(); } catch(e) {}
+    try { renderChecklistForCategory(selectedCategory || 'Other'); } catch(e) {}
+    updateProgress();
   });
-  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.check-item').forEach(el=>el.classList.remove('checked'));
-  document.querySelectorAll('.context-section').forEach(el=>el.classList.remove('visible'));
-  selectedCategory='';
-  document.getElementById('progress').style.width='0%';
-  document.getElementById('output-section').classList.remove('visible');
-  setSaveStatus('idle','');
-  window._generatedNote='';
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function val(id){const el=document.getElementById(id);return(el?.value||'').toString().trim();}
-function isFinalEscalate(){return!!document.getElementById('final_escalation')?.querySelector('.check-item.checked');}
-function showToast(msg,type=''){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2200);
-}
-
-document.addEventListener('DOMContentLoaded',async()=>{
-  const dt=document.getElementById('device_type');
-  populateModels(dt.value);
-  try{deviceTypeChanged();deviceModelChanged();}catch(e){}
-  renderChecklistForCategory(selectedCategory||'Other');
-  updateProgress();
-  await tryRestoreSession();
-});
 </script>
 </body>
 </html>
